@@ -1,4 +1,6 @@
 import socket
+import time
+import sys
 from .basestation_parser import convert_to_basestation
 
 
@@ -11,14 +13,17 @@ class BasestationReceiver:
         self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def connect(self):
-        print('Attempting to connect to {self._address}:{self._port}'.format(self=self))
-        try:
-            self._s.connect((self._address, self._port))
-            print('Connection successful!\n')
+        connected = False
+        while not connected:
+            print('Attempting to connect to {self._address}:{self._port}'.format(self=self))
+            try:
+                self._s.connect((self._address, self._port))
+                connected = True
+                print('Connection successful!\n')
 
-        except socket.error as exception:
-            print('Unable to connect to socket: {}\n'.format(exception))
-            quit()
+            except socket.error as exception:
+                print('Unable to connect to socket: {}\n'.format(exception))
+                time.sleep(5)
 
     def disconnect(self):
         self._s.close()
