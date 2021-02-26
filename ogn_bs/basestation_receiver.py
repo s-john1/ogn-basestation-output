@@ -7,11 +7,12 @@ from .aircraft import Aircraft
 class BasestationReceiver:
     _aircraft = []
 
-    def __init__(self, address, port, name=None):
+    def __init__(self, address, port, name=None, debug=False):
         self._address = address
         self._port = port
         self.name = name
         self._s = None
+        self.debug_enabled = debug
 
     def __repr__(self):
         return f'BasestationReceiver(address={self._address},port={self._port},name={self.name})'
@@ -22,15 +23,15 @@ class BasestationReceiver:
     def connect(self):
         connected = False
         while not connected:
-            print(f'Attempting to connect to {self._address}:{self._port}')
+            self.debug(f'Attempting to connect to {self._address}:{self._port}')
             try:
                 self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._s.connect((self._address, self._port))
                 connected = True
-                print('Connection successful!\n')
+                self.debug('Connection successful!\n')
 
             except socket.error as exception:
-                print(f'Unable to connect to socket: {exception}\n')
+                self.debug(f'Unable to connect to socket: {exception}\n')
                 time.sleep(5)
 
     def disconnect(self):
@@ -55,7 +56,7 @@ class BasestationReceiver:
                     aircraft.time = beacon.get('timestamp')
                 else:  # Beacon older than previous one - don't use to avoid 'jumpy' aircraft trails
                     send_message = False
-                    print('Not using position of', aircraft)
+                    self.debug(f'Not using position of {aircraft}')
 
             basestation = convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
                                                  altitude=beacon.get('altitude'),
@@ -69,6 +70,12 @@ class BasestationReceiver:
                 self._send_message(basestation)
 
     def _send_message(self, basestation):
-        print(f'Sending ({self._address}:{self._port}): {basestation}')
+        self.debug(f'Sending ({self._address}:{self._port}): {basestation}')
         self._s.send((basestation + "\n").encode())
 
+    def debug(self, message):
+        if self.debug_enabled:
+            if self.name is not None:
+                message = f'[{self.name}] {message}'
+
+            print(message)
