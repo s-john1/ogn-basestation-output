@@ -5,14 +5,13 @@ from .aircraft import Aircraft
 
 
 class BasestationReceiver:
-    _aircraft = []
-
     def __init__(self, address, port, name=None, debug=False):
         self._address = address
         self._port = port
         self.name = name
         self._s = None
         self.debug_enabled = debug
+        self._aircraft = []
 
     def __repr__(self):
         return f'BasestationReceiver(address={self._address}, port={self._port}, name={self.name}, ' \
@@ -39,20 +38,21 @@ class BasestationReceiver:
         self._s.close()
 
     def process_beacon(self, beacon):
-        if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver'\
+        if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver' \
                 and beacon.get('beacon_type') != 'aprs_receiver':
             send_message = self._should_send_message(beacon)
 
-            basestation = convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
-                                                 altitude=beacon.get('altitude'),
-                                                 ground_speed=beacon.get('ground_speed'),
-                                                 track=beacon.get('track'),
-                                                 latitude=beacon.get('latitude'),
-                                                 longitude=beacon.get('longitude'),
-                                                 vertical_rate=beacon.get('climb_rate'))
-
             if send_message:
-                self._send_message(basestation)
+                self._send_message(self._create_basestation(beacon))
+
+    def _create_basestation(self, beacon):
+        return convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
+                                      altitude=beacon.get('altitude'),
+                                      ground_speed=beacon.get('ground_speed'),
+                                      track=beacon.get('track'),
+                                      latitude=beacon.get('latitude'),
+                                      longitude=beacon.get('longitude'),
+                                      vertical_rate=beacon.get('climb_rate'))
 
     def _should_send_message(self, beacon):
         aircraft = self._find_aircraft(beacon.get('name'))  # Look for existing aircraft object
