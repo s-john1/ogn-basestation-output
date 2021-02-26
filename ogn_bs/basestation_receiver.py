@@ -7,10 +7,17 @@ from .aircraft import Aircraft
 class BasestationReceiver:
     _aircraft = []
 
-    def __init__(self, address, port):
+    def __init__(self, address, port, name=None):
         self._address = address
         self._port = port
+        self.name = name
         self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def __repr__(self):
+        return f'BasestationReceiver(address={self._address},port={self._port},name={self.name})'
+
+    def __str__(self):
+        return f'Name: {self.name}, Address: {self._address}, Port: {self._port}'
 
     def connect(self):
         connected = False
