@@ -39,7 +39,8 @@ class BasestationReceiver:
         self._s.close()
 
     def process_beacon(self, beacon):
-        if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver':
+        if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver'\
+                and beacon.get('beacon_type') != 'aprs_receiver':
             send_message = self._should_send_message(beacon)
 
             basestation = convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
