@@ -10,10 +10,10 @@ class Aircraft:
         self._time = current_time
 
     def __repr__(self):
-        return f'Aircraft(device_id={self.device_id})'
+        return f'Aircraft(device_id={self.device_id}, time={repr(self._time)})'
 
     def __str__(self):
-        return f'Aircraft: {self.device_id}'
+        return f'Aircraft: {self.device_id}, Time: {self._time}'
 
     @property
     def time(self):

@@ -16,7 +16,7 @@ class OgnBasestation:
         self._receivers = basestation_receivers
 
     def __repr__(self):
-        return f'OgnBasestation(aprs_client={repr(self._aprs_client)},' \
+        return f'OgnBasestation(aprs_client={repr(self._aprs_client)}, ' \
                f'receivers={[repr(receiver) for receiver in self._receivers]})'
 
     def connect(self):
