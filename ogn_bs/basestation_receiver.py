@@ -11,7 +11,7 @@ class BasestationReceiver:
         self._address = address
         self._port = port
         self.name = name
-        self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._s = None
 
     def __repr__(self):
         return f'BasestationReceiver(address={self._address},port={self._port},name={self.name})'
@@ -24,6 +24,7 @@ class BasestationReceiver:
         while not connected:
             print(f'Attempting to connect to {self._address}:{self._port}')
             try:
+                self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._s.connect((self._address, self._port))
                 connected = True
                 print('Connection successful!\n')
