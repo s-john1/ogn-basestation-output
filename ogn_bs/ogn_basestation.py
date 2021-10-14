@@ -75,7 +75,7 @@ class OgnBasestation:
     def _validate_message(self, beacon):
         # If beacon is an aircraft position message
         if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver' \
-                and beacon.get('beacon_type') != 'aprs_receiver':
+                and beacon.get('beacon_type') != 'aprs_receiver' and beacon.get('beacon_type') != 'unknown':
 
             aircraft = self._find_aircraft(beacon.get('name'))  # Look for existing aircraft object
 
