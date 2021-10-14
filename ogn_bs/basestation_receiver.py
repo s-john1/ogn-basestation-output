@@ -1,7 +1,16 @@
 import socket
 import time
 from .basestation_parser import convert_to_basestation
-from .aircraft import Aircraft
+
+
+def create_basestation(beacon):
+    return convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
+                                  altitude=beacon.get('altitude'),
+                                  ground_speed=beacon.get('ground_speed'),
+                                  track=beacon.get('track'),
+                                  latitude=beacon.get('latitude'),
+                                  longitude=beacon.get('longitude'),
+                                  vertical_rate=beacon.get('climb_rate'))
 
 
 class BasestationReceiver:
@@ -11,11 +20,9 @@ class BasestationReceiver:
         self.name = name
         self._s = None
         self.debug_enabled = debug
-        self._aircraft = []
 
     def __repr__(self):
-        return f'BasestationReceiver(address={self._address}, port={self._port}, name={self.name}, ' \
-               f'aircraft={[aircraft for aircraft in self._aircraft]})'
+        return f'BasestationReceiver(address={self._address}, port={self._port}, name={self.name})'
 
     def __str__(self):
         return f'Name: {self.name}, Address: {self._address}, Port: {self._port}'
@@ -38,53 +45,12 @@ class BasestationReceiver:
         self._s.close()
 
     def process_beacon(self, beacon):
-        if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver' \
-                and beacon.get('beacon_type') != 'aprs_receiver':
-            send_message = self._should_send_message(beacon)
+        # Send message if it passes the filter check
+        if self._filter_message(beacon):
+            self._send_message(create_basestation(beacon))
 
-            if send_message:
-                self._send_message(self._create_basestation(beacon))
-
-    def _create_basestation(self, beacon):
-        return convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
-                                      altitude=beacon.get('altitude'),
-                                      ground_speed=beacon.get('ground_speed'),
-                                      track=beacon.get('track'),
-                                      latitude=beacon.get('latitude'),
-                                      longitude=beacon.get('longitude'),
-                                      vertical_rate=beacon.get('climb_rate'))
-
-    def _should_send_message(self, beacon):
-        aircraft = self._find_aircraft(beacon.get('name'))  # Look for existing aircraft object
-
-        if aircraft is None:  # Create new aircraft object
-            aircraft = self._add_aircraft(beacon.get('name'), beacon.get('timestamp'))
-
-        return self._check_message_age(aircraft, beacon.get('timestamp'))
-
-    def _find_aircraft(self, device_id):
-        # Find out whether current aircraft object already exists
-        for aircraft in self._aircraft:
-            if aircraft.device_id == device_id:
-                return aircraft
-        else:
-            return None
-
-    def _add_aircraft(self, device_id, timestamp):
-        aircraft = Aircraft(device_id, timestamp)
-        self._aircraft.append(aircraft)
-
-        return aircraft
-
-    def _check_message_age(self, aircraft, timestamp):
-        if aircraft.is_not_older_time(timestamp):  # Use this beacon if it is not old
-            send_message = True
-            aircraft.time = timestamp  # Update timestamp of aircraft
-        else:  # Beacon older than previous one - don't use to avoid 'jumpy' aircraft trails
-            send_message = False
-            self.debug(f'Not using position of {aircraft} as message is old')
-
-        return send_message
+    def _filter_message(self, beacon):
+        return True
 
     def _send_message(self, basestation):
         self.debug(f'Sending ({self._address}:{self._port}): {basestation}')

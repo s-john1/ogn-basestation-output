@@ -28,7 +28,3 @@ class Aircraft:
     def _check_time_instance(value):
         if not isinstance(value, datetime):
             raise TypeError("A datetime object must be used")
-
-    def is_not_older_time(self, time):
-        return time >= self._time
-
