@@ -4,13 +4,22 @@ from .basestation_parser import convert_to_basestation
 
 
 def create_basestation(beacon):
+    # Convert from m/s to fpm
+    vertical_rate = beacon.get('climb_rate') * 196.85 if beacon.get('climb_rate') is not None else None
+
+    # Convert from metres to feet
+    altitude = beacon.get('altitude') * 3.2808 if beacon.get('altitude') is not None else None
+
+    # Convert from km/h to knots
+    ground_speed = beacon.get('ground_speed') / 1.852 if beacon.get('ground_speed') is not None else None
+
     return convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
-                                  altitude=beacon.get('altitude'),
-                                  ground_speed=beacon.get('ground_speed'),
+                                  altitude=altitude,
+                                  ground_speed=ground_speed,
                                   track=beacon.get('track'),
                                   latitude=beacon.get('latitude'),
                                   longitude=beacon.get('longitude'),
-                                  vertical_rate=beacon.get('climb_rate'))
+                                  vertical_rate=vertical_rate)
 
 
 class BasestationReceiver:
