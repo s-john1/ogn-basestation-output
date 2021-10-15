@@ -54,7 +54,13 @@ class BasestationReceiver:
 
     def _send_message(self, basestation):
         self.debug(f'Sending ({self._address}:{self._port}): {basestation}')
-        self._s.send((basestation + "\n").encode())
+
+        try:
+            self._s.send((basestation + "\n").encode())
+        except socket.error as exception:
+            self.debug(f'Unable to send message: {exception}')
+            self.disconnect()
+            self.connect()
 
     def debug(self, message):
         if self.debug_enabled:
