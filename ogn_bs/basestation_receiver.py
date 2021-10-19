@@ -1,6 +1,6 @@
 import socket
 import time
-from .basestation_parser import convert_to_basestation
+from ogn_bs.basestation_parser import convert_to_basestation
 
 
 def create_basestation(beacon):

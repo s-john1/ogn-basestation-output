@@ -1,7 +1,7 @@
 from ogn.parser import parse, ParseError
 from ogn.client import AprsClient
-from .basestation_receiver import BasestationReceiver
-from .aircraft import Aircraft
+from ogn_bs.basestation_receiver import BasestationReceiver
+from ogn_bs.aircraft import Aircraft
 
 
 def check_message_age(aircraft, timestamp):
