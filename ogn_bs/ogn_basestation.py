@@ -34,7 +34,7 @@ class OgnBasestation:
                f'aircraft={[aircraft for aircraft in self._aircraft]})'
 
     def connect(self):
-        self._aprs_client.connect()
+        self._aprs_client.connect(retries=float('inf'))
         [receiver.connect() for receiver in self._receivers]  # connect each receiver
 
     def disconnect(self):
