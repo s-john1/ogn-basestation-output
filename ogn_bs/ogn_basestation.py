@@ -1,7 +1,10 @@
+from collections import namedtuple
+
 from ogn.parser import parse, ParseError
 from ogn.client import AprsClient
 from ogn_bs.basestation_receiver import BasestationReceiver
 from ogn_bs.aircraft import Aircraft
+from ogn_bs.database_handler import DatabaseHandler
 
 
 def check_message_age(aircraft, timestamp):
@@ -27,6 +30,7 @@ class OgnBasestation:
         self._aprs_client = aprs_client
         self._receivers = basestation_receivers
         self._aircraft = {}
+        self._ddb = DatabaseHandler()
 
     def __repr__(self):
         return f'OgnBasestation(aprs_client={repr(self._aprs_client)}, ' \
@@ -53,8 +57,9 @@ class OgnBasestation:
             beacon = parse(message)
             print('Received {aprs_type}: {raw_message}'.format(**beacon))
 
-            if self._validate_message(beacon):
-                [receiver.process_beacon(beacon) for receiver in self._receivers]  # call process_beacon for each receiver
+            message = self._validate_message(beacon)
+            if message is not False:
+                [receiver.process_beacon(message) for receiver in self._receivers]  # call process_beacon for each receiver
 
         except ParseError as e:
             print('Error, {}'.format(e.message))
@@ -62,6 +67,8 @@ class OgnBasestation:
     def _add_aircraft(self, device_id, timestamp):
         aircraft = Aircraft(device_id, timestamp)
         self._aircraft[device_id] = aircraft
+
+        self._ddb.match_aircraft(aircraft)
 
         return aircraft
 
@@ -73,15 +80,19 @@ class OgnBasestation:
             return None
 
     def _validate_message(self, beacon):
-        # If beacon is an aircraft position message
-        if beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver' \
-                and beacon.get('beacon_type') != 'aprs_receiver' and beacon.get('beacon_type') != 'unknown':
+        # Discard beacons that are not aircraft position messages
+        if not(beacon.get('aprs_type') == 'position' and beacon.get('beacon_type') != 'receiver'
+               and beacon.get('beacon_type') != 'aprs_receiver' and beacon.get('beacon_type') != 'unknown'):
+            return False
 
-            aircraft = self._find_aircraft(beacon.get('name'))  # Look for existing aircraft object
+        aircraft = self._find_aircraft(beacon.get('name'))  # Look for existing aircraft object
 
-            if aircraft is None:  # Create new aircraft object
-                aircraft = self._add_aircraft(beacon.get('name'), beacon.get('timestamp'))
+        if aircraft is None:  # Create new aircraft object
+            aircraft = self._add_aircraft(beacon.get('name'), beacon.get('timestamp'))
 
-            return check_message_age(aircraft, beacon.get('timestamp'))
+        # Discard messages from blocked aircraft, and messages which are old
+        if not aircraft.allow_tracking or not check_message_age(aircraft, beacon.get('timestamp')):
+            return False
 
-        return False
+        message = namedtuple('Message', ['beacon', 'aircraft'])
+        return message(beacon, aircraft)

@@ -14,7 +14,7 @@ class Aircraft:
 
     def __repr__(self):
         return f'Aircraft(device_id={self.device_id}, time={repr(self._time)}, icao={self._icao},' \
-               f'registration={self._registration}, _allow_tracking={self._allow_tracking})'
+               f'registration={self._registration}, allow_tracking={self._allow_tracking})'
 
     def __str__(self):
         return f'Aircraft: {self.device_id}, Time: {self._time}, ICAO: {self._icao}, ' \

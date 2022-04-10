@@ -41,7 +41,7 @@ class DatabaseHandler:
 
     def match_aircraft(self, aircraft):
         for device in self._ddb['devices']:
-            if device['device_id'] == aircraft.device_id:
+            if device['device_id'] == aircraft.device_id[3:9]:
                 aircraft.registration = device['registration']
                 aircraft.allow_tracking = device['tracked'] == 'Y'
                 return

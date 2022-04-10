@@ -3,7 +3,10 @@ import time
 from ogn_bs.basestation_parser import convert_to_basestation
 
 
-def create_basestation(beacon):
+def create_basestation(message):
+    beacon = message.beacon
+    aircraft = message.aircraft
+
     # Convert from m/s to fpm
     vertical_rate = beacon.get('climb_rate') * 196.85 if beacon.get('climb_rate') is not None else None
 
@@ -13,13 +16,16 @@ def create_basestation(beacon):
     # Convert from km/h to knots
     ground_speed = beacon.get('ground_speed') / 1.852 if beacon.get('ground_speed') is not None else None
 
-    return convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
+    icao = aircraft.icao if aircraft.icao is not None else beacon.get('name')[3:9]
+
+    return convert_to_basestation(mode_s_hex=icao,
                                   altitude=altitude,
                                   ground_speed=ground_speed,
                                   track=beacon.get('track'),
                                   latitude=beacon.get('latitude'),
                                   longitude=beacon.get('longitude'),
-                                  vertical_rate=vertical_rate)
+                                  vertical_rate=vertical_rate,
+                                  callsign=aircraft.registration)
 
 
 class BasestationReceiver:
@@ -53,10 +59,10 @@ class BasestationReceiver:
     def disconnect(self):
         self._s.close()
 
-    def process_beacon(self, beacon):
+    def process_beacon(self, message):
         # Send message if it passes the filter check
-        if self._filter_message(beacon):
-            self._send_message(create_basestation(beacon))
+        if self._filter_message(message):
+            self._send_message(create_basestation(message))
 
     def _filter_message(self, beacon):
         return True
