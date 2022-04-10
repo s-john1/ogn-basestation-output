@@ -5,6 +5,7 @@ from datetime import datetime
 class Aircraft:
     _icao = None
     _registration = None
+    _allow_tracking = True
 
     def __init__(self, device_id, current_time):
         self.device_id = device_id
@@ -13,10 +14,11 @@ class Aircraft:
 
     def __repr__(self):
         return f'Aircraft(device_id={self.device_id}, time={repr(self._time)}, icao={self._icao},' \
-               f'registration={self._registration})'
+               f'registration={self._registration}, _allow_tracking={self._allow_tracking})'
 
     def __str__(self):
-        return f'Aircraft: {self.device_id}, Time: {self._time}, ICAO: {self._icao}, Registration: {self._registration}'
+        return f'Aircraft: {self.device_id}, Time: {self._time}, ICAO: {self._icao}, ' \
+               f'Registration: {self._registration}, Tracking Allowed: {self._allow_tracking}'
 
     @property
     def time(self):
@@ -34,8 +36,7 @@ class Aircraft:
     @icao.setter
     def icao(self, value):
         if not re.match("^([A-Fa-f0-9]{6})$", value):
-            raise TypeError("ICAO is not in 6 digit hex format")
-
+            raise TypeError("ICAO must be in 6 digit hex format")
         self._icao = value
 
     @property
@@ -45,6 +46,16 @@ class Aircraft:
     @registration.setter
     def registration(self, value):
         self._registration = value
+
+    @property
+    def allow_tracking(self):
+        return self._allow_tracking
+
+    @allow_tracking.setter
+    def allow_tracking(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("Allow tracking value must be boolean")
+        self._allow_tracking = value
 
     @staticmethod
     def _check_time_instance(value):
