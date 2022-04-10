@@ -36,10 +36,20 @@ class DatabaseHandler:
             print("Error retrieving OGN DDB - no OGN device records found")
 
     def _load_database_file(self):
-        with open(self.DDB_FILE, 'r') as f:
-            return json.load(f)
+        try:
+            with open(self.DDB_FILE, 'r') as f:
+                return json.load(f)
+        except IOError:
+            print("Unable to open database file")
+        except json.JSONDecodeError:
+            print("Unable to parse database file")
+        return None
 
     def match_aircraft(self, aircraft):
+        if self._ddb is None:
+            print("Unable to match aircraft: Database not loaded")
+            return
+
         for device in self._ddb['devices']:
             if device['device_id'] == aircraft.device_id[3:9]:
                 aircraft.registration = device['registration']
