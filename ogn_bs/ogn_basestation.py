@@ -55,14 +55,15 @@ class OgnBasestation:
     def _process_message(self, message):
         try:
             beacon = parse(message)
-            print('Received {aprs_type}: {raw_message}'.format(**beacon))
+        except Exception as e:
+            print("Error parsing beacon:", e)
+            return
 
-            message = self._validate_message(beacon)
-            if message is not False:
-                [receiver.process_beacon(message) for receiver in self._receivers]  # call process_beacon for each receiver
+        print('Received {aprs_type}: {raw_message}'.format(**beacon))
 
-        except ParseError as e:
-            print('Error, {}'.format(e.message))
+        message = self._validate_message(beacon)
+        if message is not False:
+            [receiver.process_beacon(message) for receiver in self._receivers]  # call process_beacon for each receiver
 
     def _add_aircraft(self, device_id, timestamp):
         aircraft = Aircraft(device_id, timestamp)
