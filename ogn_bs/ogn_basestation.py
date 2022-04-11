@@ -61,6 +61,7 @@ class OgnBasestation:
         # Check if its time to remove old aircraft objects
         if self._last_remove_check + self.REMOVE_CHECK_INTERVAL < datetime.utcnow():
             self._remove_aircraft()
+            self._last_remove_check = datetime.utcnow()
 
         try:
             beacon = parse(message)
