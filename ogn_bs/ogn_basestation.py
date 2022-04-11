@@ -1,6 +1,7 @@
 from collections import namedtuple
+from datetime import datetime, timedelta
 
-from ogn.parser import parse, ParseError
+from ogn.parser import parse
 from ogn.client import AprsClient
 from ogn_bs.basestation_receiver import BasestationReceiver
 from ogn_bs.aircraft import Aircraft
@@ -19,6 +20,9 @@ def check_message_age(aircraft, timestamp):
 
 
 class OgnBasestation:
+    AIRCRAFT_TIMEOUT = timedelta(minutes=10)
+    REMOVE_CHECK_INTERVAL = timedelta(minutes=5)
+
     def __init__(self, aprs_client, basestation_receivers):
         if not isinstance(aprs_client, AprsClient):
             raise TypeError("type AprsClient must be used")
@@ -31,6 +35,7 @@ class OgnBasestation:
         self._receivers = basestation_receivers
         self._aircraft = {}
         self._ddb = DatabaseHandler()
+        self._last_remove_check = datetime.utcnow()
 
     def __repr__(self):
         return f'OgnBasestation(aprs_client={repr(self._aprs_client)}, ' \
@@ -53,6 +58,10 @@ class OgnBasestation:
             self.disconnect()
 
     def _process_message(self, message):
+        # Check if its time to remove old aircraft objects
+        if self._last_remove_check + self.REMOVE_CHECK_INTERVAL < datetime.utcnow():
+            self._remove_aircraft()
+
         try:
             beacon = parse(message)
         except Exception as e:
@@ -72,6 +81,12 @@ class OgnBasestation:
         self._ddb.match_aircraft(aircraft)
 
         return aircraft
+
+    def _remove_aircraft(self):
+        for aircraft in list(self._aircraft):
+            if self._aircraft[aircraft].time < datetime.utcnow() - self.AIRCRAFT_TIMEOUT:
+                print("Removing inactive aircraft:", aircraft)
+                del self._aircraft[aircraft]
 
     def _find_aircraft(self, device_id):
         # Find out whether current aircraft object already exists
