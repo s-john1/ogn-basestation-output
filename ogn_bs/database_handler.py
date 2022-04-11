@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from datetime import timedelta, datetime
 
 import requests
 
@@ -8,14 +9,15 @@ import requests
 class DatabaseHandler:
     DDB_URL = "https://ddb.glidernet.org/download/?j=1"
     DDB_FILE = sys.path[0] + "/ddb.json"
+    DOWNLOAD_INTERVAL = timedelta(days=1)
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-        self.download_database()
-        self._ddb = self._load_database_file()
+        self._last_download = datetime.utcnow()
 
-        # TODO: automatically re-download database every day
+        self.download_database()
+        self._ddb = self.load_database_file()
 
     def download_database(self):
         data = None
@@ -34,11 +36,12 @@ class DatabaseHandler:
         if 'devices' in data and len(data['devices']) > 0:
             with open(self.DDB_FILE, 'w') as f:
                 json.dump(data, f)
+                self._last_download = datetime.utcnow()
                 self.logger.info("OGN DDB downloaded successfully")
         else:
             self.logger.error("Error retrieving OGN DDB - no OGN device records found")
 
-    def _load_database_file(self):
+    def load_database_file(self):
         self.logger.debug("Attempting to open database file")
         try:
             with open(self.DDB_FILE, 'r') as f:
@@ -50,6 +53,11 @@ class DatabaseHandler:
         return None
 
     def match_aircraft(self, aircraft):
+        # Check if its time to re-download the database
+        if self._last_download + self.DOWNLOAD_INTERVAL < datetime.utcnow():
+            self.download_database()
+            self.load_database_file()
+
         if self._ddb is None:
             self.logger.warning("Unable to match aircraft - database not loaded")
             return
