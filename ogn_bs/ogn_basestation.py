@@ -13,7 +13,7 @@ class OgnBasestation:
     AIRCRAFT_TIMEOUT = timedelta(minutes=10)
     REMOVE_CHECK_INTERVAL = timedelta(minutes=5)
 
-    def __init__(self, aprs_client, basestation_receivers):
+    def __init__(self, aprs_client, basestation_receivers, use_database=True):
         self.logger = logging.getLogger(__name__)
 
         if not isinstance(aprs_client, AprsClient):
@@ -23,11 +23,18 @@ class OgnBasestation:
                 all(isinstance(receiver, BasestationReceiver) for receiver in basestation_receivers)):
             raise TypeError("list or tuple of type BasestationReceiver must be used")
 
+        if not isinstance(use_database, bool):
+            raise TypeError("use_database must be boolean type")
+
         self._aprs_client = aprs_client
         self._receivers = basestation_receivers
         self._aircraft = {}
-        self._ddb = DatabaseHandler()
         self._last_remove_check = datetime.utcnow()
+        self._use_database = use_database
+        self._ddb = None
+
+        if use_database:
+            self._ddb = DatabaseHandler()
 
     def __repr__(self):
         return f'OgnBasestation(aprs_client={repr(self._aprs_client)}, ' \
@@ -71,7 +78,8 @@ class OgnBasestation:
         aircraft = Aircraft(device_id, timestamp)
         self._aircraft[device_id] = aircraft
 
-        self._ddb.match_aircraft(aircraft)
+        if self._use_database:
+            self._ddb.match_aircraft(aircraft)
 
         return aircraft
 
