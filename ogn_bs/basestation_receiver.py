@@ -1,3 +1,4 @@
+import logging
 import socket
 import time
 from ogn_bs.basestation_parser import convert_to_basestation
@@ -29,12 +30,13 @@ def create_basestation(message):
 
 
 class BasestationReceiver:
-    def __init__(self, address, port, name=None, debug=False):
+    def __init__(self, address, port, name=None):
+        self.logger = logging.getLogger(__name__ + '-' + name)
+
         self._address = address
         self._port = port
         self.name = name
         self._s = None
-        self.debug_enabled = debug
 
     def __repr__(self):
         return f'BasestationReceiver(address={self._address}, port={self._port}, name={self.name})'
@@ -45,19 +47,20 @@ class BasestationReceiver:
     def connect(self):
         connected = False
         while not connected:
-            self.debug(f'Attempting to connect to {self._address}:{self._port}')
+            self.logger.info(f'Attempting to connect to {self._address}:{self._port}')
             try:
                 self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._s.connect((self._address, self._port))
                 connected = True
-                self.debug('Connection successful!\n')
+                self.logger.info('Connection successful!')
 
-            except socket.error as exception:
-                self.debug(f'Unable to connect to socket: {exception}\n')
+            except socket.error:
+                self.logger.exception('Unable to connect to socket')
                 time.sleep(5)
 
     def disconnect(self):
         self._s.close()
+        self.logger.info('Disconnected')
 
     def process_beacon(self, message):
         # Send message if it passes the filter check
@@ -68,18 +71,11 @@ class BasestationReceiver:
         return True
 
     def _send_message(self, basestation):
-        self.debug(f'Sending ({self._address}:{self._port}): {basestation}')
+        self.logger.debug(f'Sending ({self._address}:{self._port}): {basestation}')
 
         try:
             self._s.send((basestation + "\n").encode())
-        except socket.error as exception:
-            self.debug(f'Unable to send message: {exception}')
+        except socket.error:
+            self.logger.exception('Unable to send message')
             self.disconnect()
             self.connect()
-
-    def debug(self, message):
-        if self.debug_enabled:
-            if self.name is not None:
-                message = f'[{self.name}] {message}'
-
-            print(message)

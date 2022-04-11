@@ -1,3 +1,4 @@
+import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
 
@@ -8,22 +9,13 @@ from ogn_bs.aircraft import Aircraft
 from ogn_bs.database_handler import DatabaseHandler
 
 
-def check_message_age(aircraft, timestamp):
-    if timestamp >= aircraft.time:  # Use this beacon if it is not old
-        send_message = True
-        aircraft.time = timestamp  # Update timestamp of aircraft
-    else:  # Beacon older than previous one - don't use to avoid 'jumpy' aircraft trails
-        send_message = False
-        print(f'Discarding message of {aircraft} as message is old')
-
-    return send_message
-
-
 class OgnBasestation:
     AIRCRAFT_TIMEOUT = timedelta(minutes=10)
     REMOVE_CHECK_INTERVAL = timedelta(minutes=5)
 
     def __init__(self, aprs_client, basestation_receivers):
+        self.logger = logging.getLogger(__name__)
+
         if not isinstance(aprs_client, AprsClient):
             raise TypeError("type AprsClient must be used")
 
@@ -54,7 +46,7 @@ class OgnBasestation:
         try:
             self._aprs_client.run(callback=self._process_message, autoreconnect=True)
         except KeyboardInterrupt:
-            print('\nStop ogn gateway')
+            self.logger.info('Stopping program')
             self.disconnect()
 
     def _process_message(self, message):
@@ -65,11 +57,11 @@ class OgnBasestation:
 
         try:
             beacon = parse(message)
-        except Exception as e:
-            print("Error parsing beacon:", e)
+        except Exception:
+            self.logger.exception('Error parsing beacon')
             return
 
-        print('Received {aprs_type}: {raw_message}'.format(**beacon))
+        self.logger.debug('Received {aprs_type}: {raw_message}'.format(**beacon))
 
         message = self._validate_message(beacon)
         if message is not False:
@@ -86,7 +78,7 @@ class OgnBasestation:
     def _remove_aircraft(self):
         for aircraft in list(self._aircraft):
             if self._aircraft[aircraft].time < datetime.utcnow() - self.AIRCRAFT_TIMEOUT:
-                print("Removing inactive aircraft:", aircraft)
+                self.logger.debug("Removing inactive aircraft:", repr(aircraft))
                 del self._aircraft[aircraft]
 
     def _find_aircraft(self, device_id):
@@ -108,8 +100,18 @@ class OgnBasestation:
             aircraft = self._add_aircraft(beacon.get('name'), beacon.get('timestamp'))
 
         # Discard messages from blocked aircraft, and messages which are old
-        if not aircraft.allow_tracking or not check_message_age(aircraft, beacon.get('timestamp')):
+        if not aircraft.allow_tracking or not self.check_message_age(aircraft, beacon.get('timestamp')):
             return False
 
         message = namedtuple('Message', ['beacon', 'aircraft'])
         return message(beacon, aircraft)
+
+    def check_message_age(self, aircraft, timestamp):
+        if timestamp >= aircraft.time:  # Use this beacon if it is not old
+            send_message = True
+            aircraft.time = timestamp  # Update timestamp of aircraft
+        else:  # Beacon older than previous one - don't use to avoid 'jumpy' aircraft trails
+            send_message = False
+            self.logger.debug(f'Discarding message of {repr(aircraft)} as message is old')
+
+        return send_message
