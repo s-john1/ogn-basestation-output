@@ -1,9 +1,13 @@
+import logging
 import socket
 import time
 from ogn_bs.basestation_parser import convert_to_basestation
 
 
-def create_basestation(beacon):
+def create_basestation(message):
+    beacon = message.beacon
+    aircraft = message.aircraft
+
     # Convert from m/s to fpm
     vertical_rate = beacon.get('climb_rate') * 196.85 if beacon.get('climb_rate') is not None else None
 
@@ -13,22 +17,26 @@ def create_basestation(beacon):
     # Convert from km/h to knots
     ground_speed = beacon.get('ground_speed') / 1.852 if beacon.get('ground_speed') is not None else None
 
-    return convert_to_basestation(mode_s_hex=beacon.get('name')[3:9],
+    icao = aircraft.icao if aircraft.icao is not None else beacon.get('name')[3:9]
+
+    return convert_to_basestation(mode_s_hex=icao,
                                   altitude=altitude,
                                   ground_speed=ground_speed,
                                   track=beacon.get('track'),
                                   latitude=beacon.get('latitude'),
                                   longitude=beacon.get('longitude'),
-                                  vertical_rate=vertical_rate)
+                                  vertical_rate=vertical_rate,
+                                  callsign=aircraft.registration)
 
 
 class BasestationReceiver:
-    def __init__(self, address, port, name=None, debug=False):
+    def __init__(self, address, port, name=None):
+        self.logger = logging.getLogger(__name__ + '-' + name)
+
         self._address = address
         self._port = port
         self.name = name
         self._s = None
-        self.debug_enabled = debug
 
     def __repr__(self):
         return f'BasestationReceiver(address={self._address}, port={self._port}, name={self.name})'
@@ -39,41 +47,35 @@ class BasestationReceiver:
     def connect(self):
         connected = False
         while not connected:
-            self.debug(f'Attempting to connect to {self._address}:{self._port}')
+            self.logger.info(f'Attempting to connect to {self._address}:{self._port}')
             try:
                 self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._s.connect((self._address, self._port))
                 connected = True
-                self.debug('Connection successful!\n')
+                self.logger.info('Connection successful!')
 
-            except socket.error as exception:
-                self.debug(f'Unable to connect to socket: {exception}\n')
+            except socket.error:
+                self.logger.exception('Unable to connect to socket')
                 time.sleep(5)
 
     def disconnect(self):
         self._s.close()
+        self.logger.info('Disconnected')
 
-    def process_beacon(self, beacon):
+    def process_beacon(self, message):
         # Send message if it passes the filter check
-        if self._filter_message(beacon):
-            self._send_message(create_basestation(beacon))
+        if self._filter_message(message):
+            self._send_message(create_basestation(message))
 
     def _filter_message(self, beacon):
         return True
 
     def _send_message(self, basestation):
-        self.debug(f'Sending ({self._address}:{self._port}): {basestation}')
+        self.logger.debug(f'Sending ({self._address}:{self._port}): {basestation}')
 
         try:
             self._s.send((basestation + "\n").encode())
-        except socket.error as exception:
-            self.debug(f'Unable to send message: {exception}')
+        except socket.error:
+            self.logger.exception('Unable to send message')
             self.disconnect()
             self.connect()
-
-    def debug(self, message):
-        if self.debug_enabled:
-            if self.name is not None:
-                message = f'[{self.name}] {message}'
-
-            print(message)
