@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import sys
@@ -11,6 +12,8 @@ class DatabaseHandler:
     DDB_FILE = sys.path[0] + "/ddb.json"
     DOWNLOAD_INTERVAL = timedelta(days=1)
 
+    ICAO_FILE = sys.path[0] + "/icaos.json"
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
@@ -18,6 +21,8 @@ class DatabaseHandler:
 
         self.download_database()
         self._ddb = self.load_database_file()
+
+        self._icaos = self.load_icao_file()
 
     def download_database(self):
         data = None
@@ -52,6 +57,17 @@ class DatabaseHandler:
             self.logger.exception("Unable to parse database file")
         return None
 
+    def load_icao_file(self):
+        self.logger.debug("Attempting to open ICAO file")
+        try:
+            with open(self.ICAO_FILE, 'r') as f:
+                return json.load(f)
+        except IOError:
+            self.logger.exception("Unable to open ICAO file")
+        except json.JSONDecodeError:
+            self.logger.exception("Unable to parse ICAO file")
+        return None
+
     def match_aircraft(self, aircraft):
         # Check if its time to re-download the database
         if self._last_download + self.DOWNLOAD_INTERVAL < datetime.utcnow():
@@ -62,8 +78,17 @@ class DatabaseHandler:
             self.logger.warning("Unable to match aircraft - database not loaded")
             return
 
+        if self._icaos is None:
+            self.logger.warning("Unable to match aircraft - ICAO file not loaded")
+            return
+
         for device in self._ddb['devices']:
             if device['device_id'] == aircraft.device_id[3:9]:
                 aircraft.registration = device['registration']
                 aircraft.allow_tracking = device['tracked'] == 'Y'
-                return
+                break
+
+        if aircraft.registration in self._icaos:
+            aircraft.icao = self._icaos[aircraft.registration]['icao']
+
+        return
