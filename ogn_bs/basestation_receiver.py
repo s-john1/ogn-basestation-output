@@ -6,6 +6,12 @@ from ogn_bs.basestation_parser import convert_to_basestation
 
 class BasestationReceiver:
     def __init__(self, address, port, name=None, use_matched_data=True):
+        if not isinstance(port, int):
+            raise TypeError("port must be integer type")
+
+        if not isinstance(use_matched_data, bool):
+            raise TypeError("use_matched_data must be boolean type")
+
         self.logger = logging.getLogger(__name__ + '-' + name)
 
         self._address = address
