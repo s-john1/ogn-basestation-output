@@ -4,38 +4,20 @@ import time
 from ogn_bs.basestation_parser import convert_to_basestation
 
 
-def create_basestation(message):
-    beacon = message.beacon
-    aircraft = message.aircraft
-
-    # Convert from m/s to fpm
-    vertical_rate = beacon.get('climb_rate') * 196.85 if beacon.get('climb_rate') is not None else None
-
-    # Convert from metres to feet
-    altitude = beacon.get('altitude') * 3.2808 if beacon.get('altitude') is not None else None
-
-    # Convert from km/h to knots
-    ground_speed = beacon.get('ground_speed') / 1.852 if beacon.get('ground_speed') is not None else None
-
-    icao = aircraft.icao if aircraft.icao is not None else beacon.get('name')[3:9]
-
-    return convert_to_basestation(mode_s_hex=icao,
-                                  altitude=altitude,
-                                  ground_speed=ground_speed,
-                                  track=beacon.get('track'),
-                                  latitude=beacon.get('latitude'),
-                                  longitude=beacon.get('longitude'),
-                                  vertical_rate=vertical_rate,
-                                  callsign=aircraft.registration)
-
-
 class BasestationReceiver:
-    def __init__(self, address, port, name=None):
+    def __init__(self, address, port, name=None, use_matched_data=True):
+        if not isinstance(port, int):
+            raise TypeError("port must be integer type")
+
+        if not isinstance(use_matched_data, bool):
+            raise TypeError("use_matched_data must be boolean type")
+
         self.logger = logging.getLogger(__name__ + '-' + name)
 
         self._address = address
         self._port = port
         self.name = name
+        self.use_matched_data = use_matched_data
         self._s = None
 
     def __repr__(self):
@@ -65,7 +47,7 @@ class BasestationReceiver:
     def process_beacon(self, message):
         # Send message if it passes the filter check
         if self._filter_message(message):
-            self._send_message(create_basestation(message))
+            self._send_message(self.create_basestation(message))
 
     def _filter_message(self, beacon):
         return True
@@ -79,3 +61,28 @@ class BasestationReceiver:
             self.logger.exception('Unable to send message')
             self.disconnect()
             self.connect()
+
+    def create_basestation(self, message):
+        beacon = message.beacon
+        aircraft = message.aircraft
+
+        # Convert from m/s to fpm
+        vertical_rate = beacon.get('climb_rate') * 196.85 if beacon.get('climb_rate') is not None else None
+
+        # Convert from metres to feet
+        altitude = beacon.get('altitude') * 3.2808 if beacon.get('altitude') is not None else None
+
+        # Convert from km/h to knots
+        ground_speed = beacon.get('ground_speed') / 1.852 if beacon.get('ground_speed') is not None else None
+
+        icao = aircraft.icao if self.use_matched_data and aircraft.icao is not None else beacon.get('name')[3:9]
+        registration = aircraft.registration if self.use_matched_data else None
+
+        return convert_to_basestation(mode_s_hex=icao,
+                                      altitude=altitude,
+                                      ground_speed=ground_speed,
+                                      track=beacon.get('track'),
+                                      latitude=beacon.get('latitude'),
+                                      longitude=beacon.get('longitude'),
+                                      vertical_rate=vertical_rate,
+                                      callsign=registration)
