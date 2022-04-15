@@ -5,6 +5,7 @@ from datetime import datetime
 class Aircraft:
     _icao = None
     _registration = None
+    _competition_number = None
     _allow_tracking = True
 
     def __init__(self, device_id, current_time):
@@ -14,11 +15,13 @@ class Aircraft:
 
     def __repr__(self):
         return f'Aircraft(device_id={self.device_id}, time={repr(self._time)}, icao={self._icao},' \
-               f'registration={self._registration}, allow_tracking={self._allow_tracking})'
+               f'registration={self._registration}, competition_number={self._competition_number}, ' \
+               f'allow_tracking={self._allow_tracking})'
 
     def __str__(self):
         return f'Aircraft: {self.device_id}, Time: {self._time}, ICAO: {self._icao}, ' \
-               f'Registration: {self._registration}, Tracking Allowed: {self._allow_tracking}'
+               f'Registration: {self._registration}, CN: {self._competition_number}, ' \
+               f'Tracking Allowed: {self._allow_tracking}'
 
     @property
     def time(self):
@@ -46,6 +49,14 @@ class Aircraft:
     @registration.setter
     def registration(self, value):
         self._registration = value
+
+    @property
+    def competition_number(self):
+        return self._competition_number
+
+    @competition_number.setter
+    def competition_number(self, value):
+        self._competition_number = value
 
     @property
     def allow_tracking(self):

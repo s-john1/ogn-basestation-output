@@ -76,7 +76,7 @@ class BasestationReceiver:
         ground_speed = beacon.get('ground_speed') / 1.852 if beacon.get('ground_speed') is not None else None
 
         icao = aircraft.icao if self.use_matched_data and aircraft.icao is not None else beacon.get('name')[3:9]
-        registration = aircraft.registration if self.use_matched_data else None
+        competition_number = aircraft.competition_number if self.use_matched_data else None
 
         return convert_to_basestation(mode_s_hex=icao,
                                       altitude=altitude,
@@ -85,4 +85,4 @@ class BasestationReceiver:
                                       latitude=beacon.get('latitude'),
                                       longitude=beacon.get('longitude'),
                                       vertical_rate=vertical_rate,
-                                      callsign=registration)
+                                      callsign=competition_number)
