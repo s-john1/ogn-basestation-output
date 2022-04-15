@@ -66,4 +66,5 @@ class DatabaseHandler:
             if device['device_id'] == aircraft.device_id[3:9]:
                 aircraft.registration = device['registration']
                 aircraft.allow_tracking = device['tracked'] == 'Y'
+                aircraft.competition_number = device['cn']
                 return
